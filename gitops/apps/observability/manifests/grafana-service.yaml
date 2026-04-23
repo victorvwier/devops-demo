@@ -4,11 +4,9 @@ metadata:
   name: grafana
   namespace: observability
 spec:
-  type: NodePort
   selector:
     app: grafana
   ports:
     - name: http
       port: 3000
       targetPort: 3000
-      nodePort: 30030

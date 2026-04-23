@@ -92,9 +92,9 @@ If you want the shortest path to a working demo, do this:
 make demo-ui DROPLET_IP=<droplet-ip>
 ```
 
-Then open `http://<droplet-ip>:30081`.
-Then open `https://<droplet-ip>:30080`.
-Then open `http://<droplet-ip>:30030`.
+Then open `http://localhost:8081`.
+Then open `http://localhost:8080`.
+Then open `http://localhost:3000`.
 
 ## Build The Operator Binary
 

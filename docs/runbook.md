@@ -25,9 +25,9 @@
 make demo-ui DROPLET_IP=<droplet-ip>
 ```
 
-The frontend is available at `http://<droplet-ip>:30081`.
-Argo CD is available at `https://<droplet-ip>:30080`.
-Grafana is available at `http://<droplet-ip>:30030`.
+The frontend is available at `http://localhost:8081`.
+Argo CD is available at `http://localhost:8080`.
+Grafana is available at `http://localhost:3000`.
 
 ## If You Are New To Terraform
 

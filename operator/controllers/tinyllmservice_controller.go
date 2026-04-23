@@ -28,7 +28,6 @@ const (
 	backendImage       = "ghcr.io/ggml-org/llama.cpp:server"
 	backendListenPort  = 8080
 	frontendListenPort = 8080
-	frontendNodePort   = 30081
 )
 
 type TinyLLMServiceReconciler struct {
@@ -120,7 +119,7 @@ func (r *TinyLLMServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		logger.Error(err, "reconciling shared frontend")
 		return ctrl.Result{}, err
 	}
-	logger.Info("shared frontend reconciled", "frontendPort", frontendNodePort)
+	logger.Info("shared frontend reconciled")
 
 	phase := "Pending"
 	readyReplicas := int32(0)
@@ -138,7 +137,7 @@ func (r *TinyLLMServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	svc.Status.ReadyReplicas = readyReplicas
 	svc.Status.BackendMode = "llama.cpp"
 	svc.Status.BackendURL = backendURLFor(svc.Namespace, svc.Name)
-	svc.Status.FrontendURL = fmt.Sprintf("http://<droplet-ip>:%d", frontendNodePort)
+	svc.Status.FrontendURL = "http://tiny-llm-frontend.tiny-llm.svc.cluster.local"
 	svc.Status.LastReconcileTime = metav1.Now()
 	if err := r.Status().Update(ctx, &svc); err != nil {
 		logger.Error(err, "updating status")
@@ -222,8 +221,6 @@ func (r *TinyLLMServiceReconciler) ensureFrontend(ctx context.Context, namespace
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, service, func() error {
 		service.Spec.Selector = map[string]string{"app": frontendName}
 		service.Spec.Ports = []corev1.ServicePort{{Port: 80, TargetPort: intstrFromInt(frontendListenPort)}}
-		service.Spec.Type = corev1.ServiceTypeNodePort
-		service.Spec.Ports[0].NodePort = frontendNodePort
 		return nil
 	}); err != nil {
 		return err

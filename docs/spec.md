@@ -118,7 +118,7 @@ Custom operator built with Kubebuilder:
   * Deployment
   * Service
   * ConfigMap
-  * NodePort frontend service
+  * shared frontend service
 * updates status with:
 
   * phase
@@ -179,7 +179,7 @@ status:
   phase: Ready
   readyReplicas: 1
   backendURL: http://tiny-llm.tiny-llm.svc.cluster.local
-  frontendURL: http://<droplet-ip>:30081
+  frontendURL: http://localhost:8081
   lastReconcileTime: "2026-04-23T10:00:00Z"
 ```
 
@@ -211,7 +211,6 @@ The operator should reconcile a `TinyLLMService` into:
 * a backend Deployment running a tiny LLM server
 * a backend Service exposing it internally
 * a shared frontend Deployment and catalog ConfigMap
-* a NodePort service for the frontend
 * status updates on the CR
 
 ### Reconciliation rules
@@ -461,7 +460,7 @@ Show:
 
 * operator creates backend Deployment + Service
 * operator also ensures the shared frontend and catalog
-* frontend is reachable via NodePort
+* frontend is reachable through an SSH tunnel to the gateway
 * status moves to Ready
 
 ### Scenario 3 — rollout through CR
