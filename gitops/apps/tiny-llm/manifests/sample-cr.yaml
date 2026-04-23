@@ -6,8 +6,8 @@ metadata:
 spec:
   replicas: 1
   model:
-    repository: HuggingFaceTB/SmolLM2-135M-Instruct-GGUF
-    file: smollm2-135m-instruct-q4_k_m.gguf
+    repository: bartowski/SmolLM2-135M-Instruct-GGUF
+    file: SmolLM2-135M-Instruct-Q4_K_M.gguf
     revision: main
   promptPrefix: "Be brief and helpful."
   ingress:

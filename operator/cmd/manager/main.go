@@ -26,6 +26,7 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseDevMode(true)))
+	ctrl.Log.WithName("bootstrap").Info("starting operator", "metricsAddr", metricsAddr, "probeAddr", probeAddr)
 
 	scheme := runtime.NewScheme()
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
@@ -41,21 +42,27 @@ func main() {
 		LeaderElection:         false,
 	})
 	if err != nil {
+		ctrl.Log.WithName("bootstrap").Error(err, "creating manager")
 		os.Exit(1)
 	}
 
 	if err := (&controllers.TinyLLMServiceReconciler{Client: manager.GetClient(), Scheme: scheme}).SetupWithManager(manager); err != nil {
+		ctrl.Log.WithName("bootstrap").Error(err, "setting up controller")
 		os.Exit(1)
 	}
 
 	if err := manager.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+		ctrl.Log.WithName("bootstrap").Error(err, "adding healthz check")
 		os.Exit(1)
 	}
 	if err := manager.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+		ctrl.Log.WithName("bootstrap").Error(err, "adding readyz check")
 		os.Exit(1)
 	}
 
+	ctrl.Log.WithName("bootstrap").Info("operator ready")
 	if err := manager.Start(ctrl.SetupSignalHandler()); err != nil {
+		ctrl.Log.WithName("bootstrap").Error(err, "starting manager")
 		os.Exit(1)
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -45,12 +46,14 @@ type chatResponse struct {
 type Server struct {
 	cfg        appconfig.Config
 	httpClient *http.Client
+	logger     *slog.Logger
 }
 
 func New(cfg appconfig.Config) *Server {
 	return &Server{
 		cfg:        cfg,
 		httpClient: &http.Client{Timeout: 30 * time.Second},
+		logger:     slog.Default().With("component", "frontend"),
 	}
 }
 
@@ -64,7 +67,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("/slow", s.slow)
 	mux.HandleFunc("/error", s.fail)
 	mux.HandleFunc("/config", s.config)
-	return mux
+	return s.requestLogger(mux)
 }
 
 func (s *Server) health(w http.ResponseWriter, r *http.Request) {
@@ -89,15 +92,19 @@ func (s *Server) generate(w http.ResponseWriter, r *http.Request) {
 
 	entry, err := s.pickService(req.Service)
 	if err != nil {
+		s.logger.Warn("chat request rejected", "service", req.Service, "error", err)
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
 
+	s.logger.Info("chat request", "service", entry.Name, "modelRepository", entry.ModelRepository, "modelFile", entry.ModelFile)
 	reply, err := s.chatWithBackend(r.Context(), entry, req.Prompt)
 	if err != nil {
+		s.logger.Error("backend request failed", "service", entry.Name, "error", err)
 		writeJSON(w, http.StatusBadGateway, map[string]string{"error": err.Error()})
 		return
 	}
+	s.logger.Info("chat complete", "service", entry.Name, "promptBytes", len(req.Prompt), "replyBytes", len(reply))
 
 	writeJSON(w, http.StatusOK, chatResponse{
 		Service: entry.Name,
@@ -113,6 +120,7 @@ func (s *Server) slow(w http.ResponseWriter, r *http.Request) {
 	}
 
 	delay := time.Second + time.Duration(time.Now().UnixNano()%3)*time.Second
+	s.logger.Info("slow request", "delaySeconds", delay.Seconds())
 	select {
 	case <-time.After(delay):
 		writeJSON(w, http.StatusOK, map[string]any{"delaySeconds": delay.Seconds()})
@@ -126,6 +134,7 @@ func (s *Server) fail(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
+	s.logger.Info("intentional error requested")
 	writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "intentional failure"})
 }
 
@@ -162,9 +171,11 @@ func (s *Server) services(w http.ResponseWriter, r *http.Request) {
 	}
 	catalog, err := s.loadCatalog()
 	if err != nil {
+		s.logger.Error("loading service catalog", "error", err)
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
+	s.logger.Info("served service catalog", "services", len(catalog.Services))
 	writeJSON(w, http.StatusOK, catalog)
 }
 
@@ -272,6 +283,31 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(payload)
+}
+
+func (s *Server) requestLogger(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+		start := time.Now()
+		next.ServeHTTP(rec, r)
+		s.logger.Info("request",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"status", rec.status,
+			"duration", time.Since(start).String(),
+			"remote", r.RemoteAddr,
+		)
+	})
+}
+
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
+}
+
+func (r *statusRecorder) WriteHeader(status int) {
+	r.status = status
+	r.ResponseWriter.WriteHeader(status)
 }
 
 func Run(ctx context.Context, cfg appconfig.Config) error {

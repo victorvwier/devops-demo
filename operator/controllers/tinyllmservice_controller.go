@@ -38,7 +38,8 @@ type TinyLLMServiceReconciler struct {
 }
 
 func (r *TinyLLMServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := log.FromContext(ctx)
+	logger := log.FromContext(ctx).WithValues("namespace", req.Namespace, "name", req.Name)
+	logger.Info("reconciling tiny llm service")
 
 	var svc demov1alpha1.TinyLLMService
 	if err := r.Get(ctx, req.NamespacedName, &svc); err != nil {
@@ -55,11 +56,11 @@ func (r *TinyLLMServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 	modelRepo := svc.Spec.Model.Repository
 	if modelRepo == "" {
-		modelRepo = "HuggingFaceTB/SmolLM2-135M-Instruct-GGUF"
+		modelRepo = "bartowski/SmolLM2-135M-Instruct-GGUF"
 	}
 	modelFile := svc.Spec.Model.File
 	if modelFile == "" {
-		modelFile = "smollm2-135m-instruct-q4_k_m.gguf"
+		modelFile = "SmolLM2-135M-Instruct-Q4_K_M.gguf"
 	}
 	modelRevision := svc.Spec.Model.Revision
 	if modelRevision == "" {
@@ -84,24 +85,19 @@ func (r *TinyLLMServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			Args: []string{
 				"--host", "0.0.0.0",
 				"--port", fmt.Sprintf("%d", backendListenPort),
-				"--model", "/models/model.gguf",
+				"--hf-repo", modelRepo,
+				"--hf-file", modelFile,
 			},
 			Ports:     []corev1.ContainerPort{{ContainerPort: backendListenPort}},
 			Resources: svc.Spec.Resources,
 		}}
-		deployment.Spec.Template.Spec.InitContainers = []corev1.Container{{
-			Name:         "download-model",
-			Image:        "curlimages/curl:8.11.1",
-			Command:      []string{"/bin/sh", "-c"},
-			Args:         []string{fmt.Sprintf("mkdir -p /models && curl -fsSL https://huggingface.co/%s/resolve/%s/%s -o /models/model.gguf", modelRepo, modelRevision, modelFile)},
-			VolumeMounts: []corev1.VolumeMount{{Name: "model", MountPath: "/models"}},
-		}}
-		deployment.Spec.Template.Spec.Volumes = []corev1.Volume{{Name: "model", VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}}}
 		return controllerutil.SetControllerReference(&svc, deployment, r.Scheme)
 	})
 	if err != nil {
+		logger.Error(err, "reconciling backend deployment")
 		return ctrl.Result{}, err
 	}
+	logger.Info("backend deployment reconciled", "image", modelImage, "modelRepository", modelRepo, "modelFile", modelFile)
 
 	service := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: svc.Name, Namespace: svc.Namespace}}
 	_, err = controllerutil.CreateOrUpdate(ctx, r.Client, service, func() error {
@@ -110,8 +106,10 @@ func (r *TinyLLMServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return controllerutil.SetControllerReference(&svc, service, r.Scheme)
 	})
 	if err != nil {
+		logger.Error(err, "reconciling backend service")
 		return ctrl.Result{}, err
 	}
+	logger.Info("backend service reconciled")
 
 	if svc.Spec.Ingress.Enabled {
 		ingress := &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: svc.Name, Namespace: svc.Namespace}}
@@ -127,17 +125,23 @@ func (r *TinyLLMServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			return controllerutil.SetControllerReference(&svc, ingress, r.Scheme)
 		})
 		if err != nil {
+			logger.Error(err, "reconciling backend ingress")
 			return ctrl.Result{}, err
 		}
+		logger.Info("backend ingress reconciled", "host", svc.Spec.Ingress.Host)
 	}
 
 	frontendCatalog, err := r.serviceCatalog(ctx, svc.Namespace)
 	if err != nil {
+		logger.Error(err, "building frontend catalog")
 		return ctrl.Result{}, err
 	}
+	logger.Info("catalog built", "services", len(frontendCatalog))
 	if err := r.ensureFrontend(ctx, svc.Namespace, frontendCatalog); err != nil {
+		logger.Error(err, "reconciling shared frontend")
 		return ctrl.Result{}, err
 	}
+	logger.Info("shared frontend reconciled", "frontendURL", frontendURL())
 
 	phase := "Pending"
 	readyReplicas := int32(0)
@@ -161,6 +165,7 @@ func (r *TinyLLMServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		logger.Error(err, "updating status")
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	}
+	logger.Info("status updated", "phase", svc.Status.Phase, "readyReplicas", svc.Status.ReadyReplicas, "backendURL", svc.Status.BackendURL)
 
 	return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"log/slog"
 	"os/signal"
 	"syscall"
 
@@ -12,6 +13,8 @@ import (
 
 func main() {
 	cfg := appconfig.Load()
+	slog.SetDefault(slog.New(slog.NewTextHandler(log.Writer(), &slog.HandlerOptions{Level: slog.LevelInfo})))
+	slog.Info("starting tiny llm frontend", "addr", cfg.Addr, "catalogPath", cfg.CatalogPath, "defaultService", cfg.DefaultService)
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 

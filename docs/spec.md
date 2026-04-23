@@ -166,8 +166,8 @@ metadata:
 spec:
   replicas: 1
   model:
-    repository: HuggingFaceTB/SmolLM2-135M-Instruct-GGUF
-    file: smollm2-135m-instruct-q4_k_m.gguf
+    repository: bartowski/SmolLM2-135M-Instruct-GGUF
+    file: SmolLM2-135M-Instruct-Q4_K_M.gguf
     revision: main
   promptPrefix: "Be brief and helpful."
   resources:
@@ -206,8 +206,8 @@ Use tiny quantized GGUF models from Hugging Face.
 
 Suggested examples:
 
-* `HuggingFaceTB/SmolLM2-135M-Instruct-GGUF` + `smollm2-135m-instruct-q4_k_m.gguf`
-* `Qwen/Qwen2.5-0.5B-Instruct-GGUF` + `qwen2.5-0.5b-instruct-q4_k_m.gguf`
+* `bartowski/SmolLM2-135M-Instruct-GGUF` + `SmolLM2-135M-Instruct-Q4_K_M.gguf`
+* `Qwen/Qwen2.5-0.5B-Instruct-GGUF` + `qwen2.5-0.5b-instruct-q5_k_m.gguf`
 
 ## 7. Operator behavior
 
@@ -458,8 +458,8 @@ kind: TinyLLMService
 spec:
   replicas: 1
   model:
-    repository: HuggingFaceTB/SmolLM2-135M-Instruct-GGUF
-    file: smollm2-135m-instruct-q4_k_m.gguf
+    repository: bartowski/SmolLM2-135M-Instruct-GGUF
+    file: SmolLM2-135M-Instruct-Q4_K_M.gguf
     revision: main
 ```
 
