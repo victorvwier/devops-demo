@@ -3,6 +3,26 @@ variable "name" {
   default = "demo"
 }
 
+variable "region" {
+  type    = string
+  default = "nyc1"
+}
+
+variable "size" {
+  type    = string
+  default = "s-1vcpu-2gb"
+}
+
+variable "image" {
+  type    = string
+  default = "ubuntu-22-04-x64"
+}
+
+variable "ssh_public_key_path" {
+  type    = string
+  default = "~/.ssh/id_ed25519.pub"
+}
+
 variable "allowed_ssh_cidrs" {
   type    = list(string)
   default = ["0.0.0.0/0"]

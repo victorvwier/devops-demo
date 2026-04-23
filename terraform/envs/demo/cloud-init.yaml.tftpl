@@ -1,0 +1,21 @@
+#cloud-config
+package_update: true
+packages:
+  - curl
+
+write_files:
+  - path: /opt/bootstrap/install-k3s-server.sh
+    permissions: "0755"
+    content: |
+      ${indent(6, k3s_server_script)}
+  - path: /opt/bootstrap/install-argocd.sh
+    permissions: "0755"
+    content: |
+      ${indent(6, argocd_script)}
+  - path: /opt/bootstrap/bootstrap.sh
+    permissions: "0755"
+    content: |
+      ${indent(6, bootstrap_script)}
+
+runcmd:
+  - ["/opt/bootstrap/bootstrap.sh"]
