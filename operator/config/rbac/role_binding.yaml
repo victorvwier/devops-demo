@@ -5,6 +5,7 @@ metadata:
 subjects:
   - kind: ServiceAccount
     name: tiny-llm-operator
+    namespace: tiny-llm
 roleRef:
   kind: ClusterRole
   name: tiny-llm-operator
