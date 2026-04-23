@@ -15,10 +15,14 @@ variable "allowed_ssh_cidrs" {
   type = list(string)
 }
 
+variable "tag_name" {
+  type = string
+}
+
 resource "digitalocean_firewall" "this" {
   name = "${var.name}-firewall"
 
-  tags = [var.name]
+  tags = [var.tag_name]
 
   inbound_rule {
     protocol         = "tcp"

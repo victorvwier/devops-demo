@@ -31,6 +31,10 @@ variable "user_data" {
   type = string
 }
 
+variable "tag_name" {
+  type = string
+}
+
 locals {
   ssh_public_key = trimspace(file(pathexpand(var.ssh_public_key_path)))
 }
@@ -48,7 +52,7 @@ resource "digitalocean_droplet" "this" {
   ssh_keys  = [digitalocean_ssh_key.this.id]
   user_data = var.user_data
 
-  tags = [var.name]
+  tags = [var.tag_name]
 }
 
 output "name" {
@@ -60,9 +64,9 @@ output "public_ip" {
 }
 
 output "ssh_command" {
-  value = "ssh ubuntu@${digitalocean_droplet.this.ipv4_address}"
+  value = "ssh root@${digitalocean_droplet.this.ipv4_address}"
 }
 
 output "k3s_command" {
-  value = "ssh ubuntu@${digitalocean_droplet.this.ipv4_address} 'sudo k3s kubectl get nodes'"
+  value = "ssh root@${digitalocean_droplet.this.ipv4_address} 'k3s kubectl get nodes'"
 }
