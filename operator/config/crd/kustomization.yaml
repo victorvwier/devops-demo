@@ -1,0 +1,2 @@
+resources:
+  - bases/demo.platform_tinyllmservices.yaml

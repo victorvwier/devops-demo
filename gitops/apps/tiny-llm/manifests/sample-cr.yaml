@@ -1,0 +1,15 @@
+apiVersion: demo.platform/v1alpha1
+kind: TinyLLMService
+metadata:
+  name: tiny-llm
+  namespace: tiny-llm
+spec:
+  image: ghcr.io/your-org/tiny-llm-runner:latest
+  replicas: 1
+  modelMode: mock
+  promptPrefix: Demo:
+  ingress:
+    enabled: true
+    host: tiny-llm.demo.example.com
+  observability:
+    beylaEnabled: true

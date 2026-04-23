@@ -1,0 +1,4 @@
+resources:
+  - operator/operator-app.yaml
+  - observability/observability-app.yaml
+  - tiny-llm/tiny-llm-app.yaml

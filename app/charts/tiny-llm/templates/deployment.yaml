@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tiny-llm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tiny-llm
+  template:
+    metadata:
+      labels:
+        app: tiny-llm
+    spec:
+      containers:
+        - name: tiny-llm
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          ports:
+            - containerPort: {{ .Values.service.port }}
+          envFrom:
+            - configMapRef:
+                name: tiny-llm-config

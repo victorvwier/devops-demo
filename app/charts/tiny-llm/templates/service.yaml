@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: tiny-llm
+spec:
+  selector:
+    app: tiny-llm
+  ports:
+    - port: 80
+      targetPort: 8080

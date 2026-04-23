@@ -1,0 +1,16 @@
+bin/
+dist/
+build/
+*.log
+*.tmp
+*.swp
+.DS_Store
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+
+# Go
+coverage.out

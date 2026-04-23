@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: operator
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/your-org/platform-demo.git
+    targetRevision: main
+    path: operator/config/default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: tiny-llm
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

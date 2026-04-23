@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tiny-llm-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tiny-llm-operator
+  template:
+    metadata:
+      labels:
+        app: tiny-llm-operator
+    spec:
+      serviceAccountName: tiny-llm-operator
+      containers:
+        - name: manager
+          image: ghcr.io/your-org/tiny-llm-operator:latest
+          args:
+            - --metrics-bind-address=:8080
+            - --health-probe-bind-address=:8081
