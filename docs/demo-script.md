@@ -2,8 +2,8 @@
 
 1. Show repo layout.
 2. Create infra.
-3. Bootstrap k3s.
-4. Install Argo CD.
+3. Wait for cloud-init to bootstrap k3s and Argo CD.
+4. Show the Terraform outputs and SSH into the node.
 5. Show app-of-apps sync.
 6. Apply `TinyLLMService`.
 7. Hit the service endpoints.

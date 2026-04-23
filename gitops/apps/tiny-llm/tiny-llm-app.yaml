@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/your-org/platform-demo.git
+    repoURL: https://github.com/victorvwier/devops-demo.git
     targetRevision: main
     path: gitops/apps/tiny-llm/manifests
   destination:

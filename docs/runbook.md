@@ -2,14 +2,28 @@
 
 ## Bootstrap
 
-1. `terraform apply` in `terraform/envs/demo`
-2. install k3s using `bootstrap/scripts/install-k3s-server.sh`
-3. install Argo CD using `bootstrap/scripts/install-argocd.sh`
-4. apply `gitops/root/root-app.yaml`
+1. export `DIGITALOCEAN_TOKEN`
+2. `terraform init` in `terraform/envs/demo`
+3. `terraform apply` in `terraform/envs/demo`
+4. if needed, override `ssh_public_key_path` to match your local public key
+5. SSH to the droplet using the printed command as `root`
+6. verify k3s with `k3s kubectl get nodes`
+7. Argo CD is installed automatically by cloud-init
+8. apply `gitops/root/root-app.yaml` after updating the repo URL to your fork
 
 ## Demo flow
 
-1. verify `kubectl get nodes`
+1. verify `sudo k3s kubectl get nodes`
 2. verify Argo CD apps sync
 3. apply `gitops/apps/tiny-llm/manifests/sample-cr.yaml`
 4. hit `/health`, `/generate`, `/slow`, `/error`, `/config`
+
+## If You Are New To Terraform
+
+Terraform is not the thing to start the app itself.
+
+- `init` prepares Terraform to run.
+- `apply` makes Terraform compare the config to state and then change real resources.
+- in this repo, Terraform now creates a real DigitalOcean VM and firewall.
+- cloud-init brings up k3s automatically on first boot.
+- cloud-init also installs Argo CD automatically.

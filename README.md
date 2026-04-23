@@ -5,10 +5,10 @@ This repo is a first-pass scaffold for the spec in `docs/spec.md`.
 What is real today:
 - a tiny Go HTTP app with the required endpoints
 - a working first-pass operator scaffold for `TinyLLMService`
-- GitOps / bootstrap / Terraform / docs directory structure
+- a real Terraform demo VM on DigitalOcean with cloud-init bootstrap
+- GitOps / bootstrap / docs directory structure
 
 What is still scaffold-only:
-- real cloud Terraform resources
 - a fully installable operator image pipeline
 - real observability charts/config
 
@@ -18,7 +18,7 @@ What is still scaffold-only:
 - `operator/` - TinyLLMService API/controller scaffold
 - `bootstrap/` - k3s and Argo CD bootstrap scripts
 - `gitops/` - Argo CD app-of-apps manifests
-- `terraform/` - infra placeholders
+- `terraform/` - DigitalOcean demo infra
 - `docs/` - spec, runbook, and demo script
 
 ## Requirements
@@ -26,8 +26,20 @@ What is still scaffold-only:
 - Go 1.22+
 - `kubectl`
 - `kustomize` (optional, `kubectl apply -k` also works)
-- `terraform` (optional, only for the placeholders here)
+- `terraform` (required for the DigitalOcean demo node)
 - a Kubernetes cluster if you want to apply manifests
+
+## Terraform Today
+
+The `terraform/envs/demo` stack now creates a real DigitalOcean droplet.
+
+- it provisions a VM
+- it creates a firewall
+- it injects your SSH public key
+- cloud-init installs k3s automatically on first boot
+
+Set `DIGITALOCEAN_TOKEN` before running Terraform.
+If your public key is not `~/.ssh/id_ed25519.pub`, set `ssh_public_key_path`.
 
 ## Reproduce The Current Code
 
@@ -59,6 +71,18 @@ curl http://localhost:8080/config
 ```bash
 go run ./app/cmd/server --model-mode=mock --prompt-prefix='Demo:'
 ```
+
+## Demo Startup Path
+
+If you want the shortest path to a working demo, do this:
+
+1. Export `DIGITALOCEAN_TOKEN`
+2. Run `cd terraform/envs/demo && terraform init && terraform apply`
+3. SSH to the output `ssh_command` as `root`
+4. Verify k3s with the output `k3s_command`
+5. Argo CD is installed automatically by cloud-init
+6. Apply the GitOps root app after pointing it at your repo fork
+7. Apply `gitops/apps/tiny-llm/manifests/sample-cr.yaml`
 
 ## Build The Operator Binary
 
