@@ -9,11 +9,17 @@ import (
 type TinyLLMServiceSpec struct {
 	Image         string                      `json:"image,omitempty"`
 	Replicas      *int32                      `json:"replicas,omitempty"`
-	ModelMode     string                      `json:"modelMode,omitempty"`
+	Model         TinyLLMModelSpec            `json:"model,omitempty"`
 	PromptPrefix  string                      `json:"promptPrefix,omitempty"`
 	Resources     corev1.ResourceRequirements `json:"resources,omitempty"`
 	Ingress       TinyLLMServiceIngress       `json:"ingress,omitempty"`
 	Observability TinyLLMObservability        `json:"observability,omitempty"`
+}
+
+type TinyLLMModelSpec struct {
+	Repository string `json:"repository,omitempty"`
+	File       string `json:"file,omitempty"`
+	Revision   string `json:"revision,omitempty"`
 }
 
 type TinyLLMServiceIngress struct {
@@ -29,7 +35,8 @@ type TinyLLMServiceStatus struct {
 	Phase             string      `json:"phase,omitempty"`
 	ReadyReplicas     int32       `json:"readyReplicas,omitempty"`
 	BackendMode       string      `json:"backendMode,omitempty"`
-	URL               string      `json:"url,omitempty"`
+	BackendURL        string      `json:"backendURL,omitempty"`
+	FrontendURL       string      `json:"frontendURL,omitempty"`
 	LastReconcileTime metav1.Time `json:"lastReconcileTime,omitempty"`
 }
 

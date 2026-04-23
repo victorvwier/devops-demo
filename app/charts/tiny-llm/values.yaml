@@ -6,5 +6,7 @@ service:
   port: 8080
 
 config:
-  modelMode: mock
+  defaultService: ""
   promptPrefix: Demo:
+  catalogJson: |
+    {"services":[]}

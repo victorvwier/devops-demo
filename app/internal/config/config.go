@@ -6,24 +6,27 @@ import (
 )
 
 type Config struct {
-	Addr         string
-	ModelMode    string
-	PromptPrefix string
-	ServiceName  string
+	Addr           string
+	CatalogPath    string
+	DefaultService string
+	PromptPrefix   string
+	FrontendTitle  string
 }
 
 func Load() Config {
 	cfg := Config{
-		Addr:         ":8080",
-		ModelMode:    "mock",
-		PromptPrefix: "Demo:",
-		ServiceName:  "tiny-llm",
+		Addr:           ":8080",
+		CatalogPath:    getenv("CATALOG_PATH", "/etc/tiny-llm/catalog/services.json"),
+		DefaultService: getenv("DEFAULT_SERVICE", ""),
+		PromptPrefix:   "Demo:",
+		FrontendTitle:  "Tiny LLM Chat",
 	}
 
 	flag.StringVar(&cfg.Addr, "addr", getenv("ADDR", cfg.Addr), "HTTP listen address")
-	flag.StringVar(&cfg.ModelMode, "model-mode", getenv("MODEL_MODE", cfg.ModelMode), "model mode")
-	flag.StringVar(&cfg.PromptPrefix, "prompt-prefix", getenv("PROMPT_PREFIX", cfg.PromptPrefix), "response prefix")
-	flag.StringVar(&cfg.ServiceName, "service-name", getenv("SERVICE_NAME", cfg.ServiceName), "service name")
+	flag.StringVar(&cfg.CatalogPath, "catalog-path", getenv("CATALOG_PATH", cfg.CatalogPath), "path to services catalog")
+	flag.StringVar(&cfg.DefaultService, "default-service", getenv("DEFAULT_SERVICE", cfg.DefaultService), "default backend service")
+	flag.StringVar(&cfg.PromptPrefix, "prompt-prefix", getenv("PROMPT_PREFIX", cfg.PromptPrefix), "system prompt prefix")
+	flag.StringVar(&cfg.FrontendTitle, "frontend-title", getenv("FRONTEND_TITLE", cfg.FrontendTitle), "frontend title")
 	flag.Parse()
 
 	return cfg

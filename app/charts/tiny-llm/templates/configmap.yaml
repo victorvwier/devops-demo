@@ -3,5 +3,5 @@ kind: ConfigMap
 metadata:
   name: tiny-llm-config
 data:
-  MODEL_MODE: {{ .Values.config.modelMode | quote }}
-  PROMPT_PREFIX: {{ .Values.config.promptPrefix | quote }}
+  services.json: |
+{{ .Values.config.catalogJson | indent 4 }}

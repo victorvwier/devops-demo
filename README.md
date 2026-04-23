@@ -3,7 +3,7 @@
 This repo is a first-pass scaffold for the spec in `docs/spec.md`.
 
 What is real today:
-- a tiny Go HTTP app with the required endpoints
+- a tiny Go HTTP frontend with chat/proxy endpoints
 - a working first-pass operator scaffold for `TinyLLMService`
 - a real Terraform demo VM on DigitalOcean with cloud-init bootstrap
 - GitOps / bootstrap / docs directory structure
@@ -14,7 +14,7 @@ What is still scaffold-only:
 
 ## Repo Layout
 
-- `app/` - tiny Go service
+- `app/` - tiny Go chat frontend
 - `operator/` - TinyLLMService API/controller scaffold
 - `bootstrap/` - k3s and Argo CD bootstrap scripts
 - `gitops/` - Argo CD app-of-apps manifests
@@ -52,7 +52,7 @@ If your public key is not `~/.ssh/id_ed25519.pub`, set `ssh_public_key_path`.
 go test ./...
 ```
 
-3. Start the demo app locally:
+3. Start the demo frontend locally:
 
 ```bash
 go run ./app/cmd/server
@@ -71,7 +71,7 @@ curl http://localhost:8080/config
 5. Change config with flags if needed:
 
 ```bash
-go run ./app/cmd/server --model-mode=mock --prompt-prefix='Demo:'
+go run ./app/cmd/server --catalog-path=/tmp/services.json --default-service=tiny-llm
 ```
 
 ## Demo Startup Path
@@ -85,7 +85,7 @@ If you want the shortest path to a working demo, do this:
 5. Argo CD is installed automatically by cloud-init
 6. Run `ssh root@<droplet-ip> 'argocd-admin-password'` and log in as `admin`
 7. Apply the GitOps root app after pointing it at your repo fork
-8. Apply `gitops/apps/tiny-llm/manifests/sample-cr.yaml`
+8. Apply `gitops/apps/tiny-llm/manifests/sample-cr.yaml` and `gitops/apps/tiny-llm/manifests/coder-cr.yaml`
 9. To open Argo CD and Grafana from your laptop, use the helper:
 
 ```bash
@@ -127,8 +127,8 @@ The spec this repo follows is:
 2. k3s boots on the first VM.
 3. Argo CD installs once.
 4. Argo CD syncs namespaces, operator, observability, and the demo app.
-5. Applying a `TinyLLMService` creates Deployment, Service, ConfigMap, and optional Ingress.
-6. The app serves `/health`, `/generate`, `/slow`, `/error`, and `/config`.
+5. Applying a `TinyLLMService` creates a backend Deployment, Service, and optional Ingress, plus a shared frontend Deployment and catalog ConfigMap.
+6. The frontend serves `/health`, `/generate`, `/api/chat`, `/api/services`, `/slow`, `/error`, and `/config`.
 7. Grafana/Prometheus/Beyla show traffic and latency.
 
 ## Files To Read Next

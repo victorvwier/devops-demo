@@ -4,10 +4,12 @@ metadata:
   name: tiny-llm
   namespace: tiny-llm
 spec:
-  image: ghcr.io/victorvwier/tiny-llm-runner:latest
   replicas: 1
-  modelMode: mock
-  promptPrefix: "Demo:"
+  model:
+    repository: HuggingFaceTB/SmolLM2-135M-Instruct-GGUF
+    file: smollm2-135m-instruct-q4_k_m.gguf
+    revision: main
+  promptPrefix: "Be brief and helpful."
   ingress:
     enabled: true
     host: tiny-llm.demo.example.com

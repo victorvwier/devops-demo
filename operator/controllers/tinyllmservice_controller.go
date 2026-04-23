@@ -2,7 +2,9 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"sort"
 	"time"
 
 	demov1alpha1 "devops-demo/operator/api/v1alpha1"
@@ -18,6 +20,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+)
+
+const (
+	frontendName       = "tiny-llm-frontend"
+	frontendConfigMap  = "tiny-llm-frontend-config"
+	frontendImage      = "ghcr.io/victorvwier/tiny-llm-runner:latest"
+	frontendHost       = "tiny-llm.demo.example.com"
+	backendImage       = "ghcr.io/ggerganov/llama.cpp:server"
+	backendListenPort  = 8080
+	frontendListenPort = 8080
 )
 
 type TinyLLMServiceReconciler struct {
@@ -37,44 +49,54 @@ func (r *TinyLLMServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	if svc.Spec.Replicas != nil {
 		replicas = *svc.Spec.Replicas
 	}
-	mode := svc.Spec.ModelMode
-	if mode == "" {
-		mode = "mock"
+	modelImage := svc.Spec.Image
+	if modelImage == "" {
+		modelImage = backendImage
 	}
-	prefix := svc.Spec.PromptPrefix
-	if prefix == "" {
-		prefix = "Demo:"
+	modelRepo := svc.Spec.Model.Repository
+	if modelRepo == "" {
+		modelRepo = "HuggingFaceTB/SmolLM2-135M-Instruct-GGUF"
 	}
-
-	configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: svc.Name, Namespace: svc.Namespace}}
-	_, err := controllerutil.CreateOrUpdate(ctx, r.Client, configMap, func() error {
-		configMap.Data = map[string]string{
-			"MODEL_MODE":    mode,
-			"PROMPT_PREFIX": prefix,
-		}
-		return controllerutil.SetControllerReference(&svc, configMap, r.Scheme)
-	})
-	if err != nil {
-		return ctrl.Result{}, err
+	modelFile := svc.Spec.Model.File
+	if modelFile == "" {
+		modelFile = "smollm2-135m-instruct-q4_k_m.gguf"
 	}
-
+	modelRevision := svc.Spec.Model.Revision
+	if modelRevision == "" {
+		modelRevision = "main"
+	}
+	var err error
 	deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: svc.Name, Namespace: svc.Namespace}}
 	_, err = controllerutil.CreateOrUpdate(ctx, r.Client, deployment, func() error {
 		labels := map[string]string{"app": svc.Name}
 		deployment.Labels = labels
 		deployment.Spec.Replicas = &replicas
 		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: labels}
-		deployment.Spec.Template.Labels = labels
-		deployment.Spec.Template.Annotations = map[string]string{"demo.platform/model-mode": mode}
+		deployment.Spec.Template.ObjectMeta.Labels = labels
+		deployment.Spec.Template.ObjectMeta.Annotations = map[string]string{
+			"demo.platform/model-repo":     modelRepo,
+			"demo.platform/model-file":     modelFile,
+			"demo.platform/model-revision": modelRevision,
+		}
 		deployment.Spec.Template.Spec.Containers = []corev1.Container{{
-			Name:  "tiny-llm",
-			Image: svc.Spec.Image,
-			EnvFrom: []corev1.EnvFromSource{{
-				ConfigMapRef: &corev1.ConfigMapEnvSource{LocalObjectReference: corev1.LocalObjectReference{Name: configMap.Name}},
-			}},
-			Ports:     []corev1.ContainerPort{{ContainerPort: 8080}},
+			Name:  "llama-server",
+			Image: modelImage,
+			Args: []string{
+				"--host", "0.0.0.0",
+				"--port", fmt.Sprintf("%d", backendListenPort),
+				"--model", "/models/model.gguf",
+			},
+			Ports:     []corev1.ContainerPort{{ContainerPort: backendListenPort}},
 			Resources: svc.Spec.Resources,
 		}}
+		deployment.Spec.Template.Spec.InitContainers = []corev1.Container{{
+			Name:         "download-model",
+			Image:        "curlimages/curl:8.11.1",
+			Command:      []string{"/bin/sh", "-c"},
+			Args:         []string{fmt.Sprintf("mkdir -p /models && curl -fsSL https://huggingface.co/%s/resolve/%s/%s -o /models/model.gguf", modelRepo, modelRevision, modelFile)},
+			VolumeMounts: []corev1.VolumeMount{{Name: "model", MountPath: "/models"}},
+		}}
+		deployment.Spec.Template.Spec.Volumes = []corev1.Volume{{Name: "model", VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}}}}
 		return controllerutil.SetControllerReference(&svc, deployment, r.Scheme)
 	})
 	if err != nil {
@@ -84,7 +106,7 @@ func (r *TinyLLMServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	service := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: svc.Name, Namespace: svc.Namespace}}
 	_, err = controllerutil.CreateOrUpdate(ctx, r.Client, service, func() error {
 		service.Spec.Selector = map[string]string{"app": svc.Name}
-		service.Spec.Ports = []corev1.ServicePort{{Port: 80, TargetPort: intstrFromInt(8080)}}
+		service.Spec.Ports = []corev1.ServicePort{{Port: 80, TargetPort: intstrFromInt(backendListenPort)}}
 		return controllerutil.SetControllerReference(&svc, service, r.Scheme)
 	})
 	if err != nil {
@@ -109,6 +131,14 @@ func (r *TinyLLMServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}
 
+	frontendCatalog, err := r.serviceCatalog(ctx, svc.Namespace)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if err := r.ensureFrontend(ctx, svc.Namespace, frontendCatalog); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	phase := "Pending"
 	readyReplicas := int32(0)
 	var currentDeployment appsv1.Deployment
@@ -123,8 +153,9 @@ func (r *TinyLLMServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	svc.Status.Phase = phase
 	svc.Status.ReadyReplicas = readyReplicas
-	svc.Status.BackendMode = mode
-	svc.Status.URL = urlFor(svc.Namespace, svc.Name, svc.Spec.Ingress.Host)
+	svc.Status.BackendMode = "llama.cpp"
+	svc.Status.BackendURL = backendURLFor(svc.Namespace, svc.Name)
+	svc.Status.FrontendURL = frontendURL()
 	svc.Status.LastReconcileTime = metav1.Now()
 	if err := r.Status().Update(ctx, &svc); err != nil {
 		logger.Error(err, "updating status")
@@ -139,7 +170,6 @@ func (r *TinyLLMServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&demov1alpha1.TinyLLMService{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Service{}).
-		Owns(&corev1.ConfigMap{}).
 		Owns(&networkingv1.Ingress{}).
 		Complete(r)
 }
@@ -148,9 +178,98 @@ func intstrFromInt(v int) intstr.IntOrString {
 	return intstr.FromInt(v)
 }
 
-func urlFor(namespace, name, host string) string {
-	if host != "" {
-		return fmt.Sprintf("https://%s", host)
+func (r *TinyLLMServiceReconciler) serviceCatalog(ctx context.Context, namespace string) ([]map[string]string, error) {
+	var list demov1alpha1.TinyLLMServiceList
+	if err := r.List(ctx, &list, client.InNamespace(namespace)); err != nil {
+		return nil, err
 	}
+	entries := make([]map[string]string, 0, len(list.Items))
+	for _, item := range list.Items {
+		entries = append(entries, map[string]string{
+			"name":            item.Name,
+			"namespace":       item.Namespace,
+			"backendUrl":      backendURLFor(item.Namespace, item.Name),
+			"promptPrefix":    item.Spec.PromptPrefix,
+			"modelRepository": item.Spec.Model.Repository,
+			"modelFile":       item.Spec.Model.File,
+			"modelRevision":   item.Spec.Model.Revision,
+		})
+	}
+	sort.Slice(entries, func(i, j int) bool { return entries[i]["name"] < entries[j]["name"] })
+	return entries, nil
+}
+
+func (r *TinyLLMServiceReconciler) ensureFrontend(ctx context.Context, namespace string, services []map[string]string) error {
+	configMap := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: frontendConfigMap, Namespace: namespace}}
+	configJSON, err := json.Marshal(map[string]any{"services": services})
+	if err != nil {
+		return err
+	}
+	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, configMap, func() error {
+		configMap.Data = map[string]string{"services.json": string(configJSON)}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Name: frontendName, Namespace: namespace}}
+	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, deployment, func() error {
+		labels := map[string]string{"app": frontendName}
+		deployment.Labels = labels
+		deployment.Spec.Replicas = int32Ptr(1)
+		deployment.Spec.Selector = &metav1.LabelSelector{MatchLabels: labels}
+		deployment.Spec.Template.ObjectMeta.Labels = labels
+		deployment.Spec.Template.Spec.Containers = []corev1.Container{{
+			Name:         "frontend",
+			Image:        frontendImage,
+			Env:          []corev1.EnvVar{{Name: "CATALOG_PATH", Value: "/etc/tiny-llm/catalog/services.json"}},
+			Ports:        []corev1.ContainerPort{{ContainerPort: frontendListenPort}},
+			VolumeMounts: []corev1.VolumeMount{{Name: "catalog", MountPath: "/etc/tiny-llm/catalog", ReadOnly: true}},
+		}}
+		deployment.Spec.Template.Spec.Volumes = []corev1.Volume{{
+			Name:         "catalog",
+			VolumeSource: corev1.VolumeSource{ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: configMap.Name}}},
+		}}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	service := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: frontendName, Namespace: namespace}}
+	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, service, func() error {
+		service.Spec.Selector = map[string]string{"app": frontendName}
+		service.Spec.Ports = []corev1.ServicePort{{Port: 80, TargetPort: intstrFromInt(frontendListenPort)}}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	ingress := &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: frontendName, Namespace: namespace}}
+	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, ingress, func() error {
+		ingress.Spec.Rules = []networkingv1.IngressRule{{
+			Host: frontendHost,
+			IngressRuleValue: networkingv1.IngressRuleValue{HTTP: &networkingv1.HTTPIngressRuleValue{Paths: []networkingv1.HTTPIngressPath{{
+				Path:     "/",
+				PathType: func() *networkingv1.PathType { p := networkingv1.PathTypePrefix; return &p }(),
+				Backend:  networkingv1.IngressBackend{Service: &networkingv1.IngressServiceBackend{Name: service.Name, Port: networkingv1.ServiceBackendPort{Number: 80}}},
+			}}}},
+		}}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func backendURLFor(namespace, name string) string {
 	return fmt.Sprintf("http://%s.%s.svc.cluster.local", name, namespace)
+}
+
+func frontendURL() string {
+	return fmt.Sprintf("https://%s", frontendHost)
+}
+
+func int32Ptr(v int32) *int32 {
+	return &v
 }

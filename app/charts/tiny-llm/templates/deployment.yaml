@@ -17,6 +17,18 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           ports:
             - containerPort: {{ .Values.service.port }}
-          envFrom:
-            - configMapRef:
-                name: tiny-llm-config
+          env:
+            - name: CATALOG_PATH
+              value: /etc/tiny-llm/catalog/services.json
+            - name: DEFAULT_SERVICE
+              value: {{ .Values.config.defaultService | quote }}
+            - name: PROMPT_PREFIX
+              value: {{ .Values.config.promptPrefix | quote }}
+          volumeMounts:
+            - name: catalog
+              mountPath: /etc/tiny-llm/catalog
+              readOnly: true
+      volumes:
+        - name: catalog
+          configMap:
+            name: tiny-llm-config

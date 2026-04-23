@@ -164,10 +164,12 @@ kind: TinyLLMService
 metadata:
   name: tiny-llm
 spec:
-  image: ghcr.io/your-org/tiny-llm-runner:latest
   replicas: 1
-  modelMode: mock
-  promptPrefix: "Demo:"
+  model:
+    repository: HuggingFaceTB/SmolLM2-135M-Instruct-GGUF
+    file: smollm2-135m-instruct-q4_k_m.gguf
+    revision: main
+  promptPrefix: "Be brief and helpful."
   resources:
     cpu: "250m"
     memory: "512Mi"
@@ -179,7 +181,8 @@ spec:
 status:
   phase: Ready
   readyReplicas: 1
-  url: https://tiny-llm.demo.example.com
+  backendURL: http://tiny-llm.tiny-llm.svc.cluster.local
+  frontendURL: https://tiny-llm.demo.example.com
   lastReconcileTime: "2026-04-23T10:00:00Z"
 ```
 
@@ -187,38 +190,40 @@ status:
 
 Suggested fields:
 
-* `image`
 * `replicas`
-* `modelMode`
+* `model.repository`
+* `model.file`
+* `model.revision`
 * `promptPrefix`
 * `resources`
 * `ingress.enabled`
 * `ingress.host`
 * `observability.beylaEnabled`
 
-### `modelMode` values
+### Tiny model refs
 
-* `mock` — fake responses, zero real inference
-* `tiny-local` — optional super-small local model
-* `remote` — optional API-backed mode later
+Use tiny quantized GGUF models from Hugging Face.
 
-For demo v1, default to `mock`.
+Suggested examples:
+
+* `HuggingFaceTB/SmolLM2-135M-Instruct-GGUF` + `smollm2-135m-instruct-q4_k_m.gguf`
+* `Qwen/Qwen2.5-0.5B-Instruct-GGUF` + `qwen2.5-0.5b-instruct-q4_k_m.gguf`
 
 ## 7. Operator behavior
 
 The operator should reconcile a `TinyLLMService` into:
 
-* a Deployment running the tiny runner
-* a Service exposing it internally
-* an Ingress optionally exposing it publicly
-* a ConfigMap containing runtime config
+* a backend Deployment running a tiny LLM server
+* a backend Service exposing it internally
+* an optional backend Ingress
+* a shared frontend Deployment and catalog ConfigMap
 * status updates on the CR
 
 ### Reconciliation rules
 
 * if CR does not exist, nothing exists
 * if `replicas` changes, scale Deployment
-* if `modelMode` changes, roll Deployment
+* if `model.*` changes, roll Deployment
 * if `ingress.enabled` changes, add/remove Ingress
 * if Service endpoint becomes healthy, mark CR `Ready`
 * if pods are pending or crashing, set status accordingly
@@ -452,12 +457,16 @@ Apply:
 kind: TinyLLMService
 spec:
   replicas: 1
-  modelMode: mock
+  model:
+    repository: HuggingFaceTB/SmolLM2-135M-Instruct-GGUF
+    file: smollm2-135m-instruct-q4_k_m.gguf
+    revision: main
 ```
 
 Show:
 
-* operator creates Deployment + Service + Ingress
+* operator creates backend Deployment + Service + optional Ingress
+* operator also ensures the shared frontend and catalog
 * status moves to Ready
 
 ### Scenario 3 — rollout through CR
@@ -466,12 +475,14 @@ Change:
 
 * `promptPrefix`
 * `replicas`
-* `modelMode`
+* `model.repository`
+* `model.file`
+* `model.revision`
 
 Show:
 
 * operator reconciles
-* Deployment rolls
+* backend Deployment rolls
 * status updates
 
 ### Scenario 4 — observability
@@ -479,6 +490,8 @@ Show:
 Hit:
 
 * `/generate`
+* `/api/chat`
+* `/api/services`
 * `/slow`
 * `/error`
 
@@ -597,7 +610,7 @@ Suggested live flow:
 8. hit `/generate`, `/slow`, `/error`
 9. open Grafana
 10. show RED metrics
-11. change CR replicas or mode
+11. change CR replicas or model
 12. show reconcile + rollout
 13. commit Git change
 14. show ArgoCD applying it
@@ -611,7 +624,7 @@ Build **this exact version**:
 * ArgoCD manages all in-cluster components
 * Kubebuilder custom operator
 * `TinyLLMService` CRD
-* tiny Go HTTP “LLM runner” in `mock` mode
+* tiny Go frontend + operator-managed llama.cpp backends
 * Grafana + Prometheus + Beyla first
 * Loki + Tempo as follow-up
 
@@ -628,7 +641,7 @@ That gives you:
 * use Go for both app and operator
 * use Helm chart for app packaging
 * use app-of-apps in ArgoCD
-* keep real local LLM inference out of v1
+* keep the models tiny and quantized for v1
 
 If you want, next thing I can do is turn this into a **concrete implementation backlog** with repo skeleton, milestones, and first CRD/API shape.
 

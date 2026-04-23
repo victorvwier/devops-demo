@@ -25,8 +25,15 @@
 make demo-ui DROPLET_IP=<droplet-ip>
 ```
 
-Then browse to `https://localhost:8080`.
-Then browse to `http://localhost:3000`.
+If you want to forward them separately:
+
+```bash
+./scripts/port-forward-argocd.sh <droplet-ip>
+./scripts/port-forward-grafana.sh <droplet-ip>
+```
+
+Then browse to `https://localhost:8080` for Argo CD.
+Then browse to `http://localhost:3000` for Grafana.
 
 ## If You Are New To Terraform
 

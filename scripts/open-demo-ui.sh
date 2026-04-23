@@ -7,9 +7,13 @@ if [[ $# -ne 1 ]]; then
 fi
 
 droplet_ip="$1"
+script_dir="$(cd "$(dirname "$0")" && pwd)"
 
-exec ssh \
-  -L 8080:127.0.0.1:8080 \
-  -L 3000:127.0.0.1:3000 \
-  root@"${droplet_ip}" \
-  'kubectl -n argocd port-forward svc/argocd-server 8080:443 >/tmp/argocd-portforward.log 2>&1 & kubectl -n observability port-forward svc/grafana 3000:3000 >/tmp/grafana-portforward.log 2>&1 & wait'
+"${script_dir}/port-forward-argocd.sh" "${droplet_ip}" &
+argocd_pid=$!
+
+"${script_dir}/port-forward-grafana.sh" "${droplet_ip}" &
+grafana_pid=$!
+
+trap 'kill ${argocd_pid} ${grafana_pid} 2>/dev/null || true' EXIT
+wait ${argocd_pid} ${grafana_pid}

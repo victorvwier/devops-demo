@@ -26,8 +26,15 @@ spec:
                 replicas:
                   type: integer
                   format: int32
-                modelMode:
-                  type: string
+                model:
+                  type: object
+                  properties:
+                    repository:
+                      type: string
+                    file:
+                      type: string
+                    revision:
+                      type: string
                 promptPrefix:
                   type: string
                 resources:
@@ -47,3 +54,17 @@ spec:
                       type: boolean
             status:
               type: object
+              properties:
+                phase:
+                  type: string
+                readyReplicas:
+                  type: integer
+                  format: int32
+                backendMode:
+                  type: string
+                backendURL:
+                  type: string
+                frontendURL:
+                  type: string
+                lastReconcileTime:
+                  type: string
