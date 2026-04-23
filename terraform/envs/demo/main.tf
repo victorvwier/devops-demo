@@ -8,6 +8,10 @@ terraform {
   }
 }
 
+resource "digitalocean_tag" "this" {
+  name = var.name
+}
+
 locals {
   k3s_server_script = file(abspath("${path.module}/../../../bootstrap/scripts/install-k3s-server.sh"))
   argocd_script     = file(abspath("${path.module}/../../../bootstrap/scripts/install-argocd.sh"))
@@ -46,6 +50,7 @@ module "vm" {
   image               = var.image
   ssh_public_key_path = var.ssh_public_key_path
   user_data           = local.user_data
+  tag_name            = digitalocean_tag.this.name
 }
 
 module "firewall" {
@@ -53,4 +58,5 @@ module "firewall" {
 
   name              = var.name
   allowed_ssh_cidrs = var.allowed_ssh_cidrs
+  tag_name          = digitalocean_tag.this.name
 }
