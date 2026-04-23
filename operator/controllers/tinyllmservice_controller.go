@@ -27,7 +27,7 @@ const (
 	frontendConfigMap  = "tiny-llm-frontend-config"
 	frontendImage      = "ghcr.io/victorvwier/tiny-llm-runner:latest"
 	frontendHost       = "tiny-llm.demo.example.com"
-	backendImage       = "ghcr.io/ggerganov/llama.cpp:server"
+	backendImage       = "ghcr.io/ggml-org/llama.cpp:server"
 	backendListenPort  = 8080
 	frontendListenPort = 8080
 )
