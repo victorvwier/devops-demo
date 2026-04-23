@@ -9,7 +9,7 @@ What is real today:
 - GitOps / bootstrap / docs directory structure
 
 What is still scaffold-only:
-- a fully installable operator image pipeline
+- GHCR image pipelines for the operator and demo app
 - real observability charts/config
 
 ## Repo Layout
@@ -100,7 +100,9 @@ Then open `https://localhost:8080`.
 go build -o bin/tiny-llm-operator ./operator/cmd/manager
 ```
 
-That gives you the controller binary, but the repo does not yet include a full image build/push flow.
+That gives you the controller binary for local runs.
+The operator image is built by GitHub Actions and pushed to GHCR as `ghcr.io/victorvwier/tiny-llm-operator:latest`.
+The demo app image is built the same way as `ghcr.io/victorvwier/tiny-llm-runner:latest`.
 
 ## Apply The Kubernetes Scaffolding
 
@@ -112,8 +114,8 @@ kubectl apply -k gitops/apps
 ```
 
 Note: the manifests use placeholder image names and repo URLs. Before real cluster deployment, replace these:
-- `ghcr.io/your-org/tiny-llm-runner:latest`
-- `ghcr.io/your-org/tiny-llm-operator:latest`
+- `ghcr.io/victorvwier/tiny-llm-runner:latest`
+- `ghcr.io/victorvwier/tiny-llm-operator:latest`
 - `https://github.com/your-org/platform-demo.git`
 
 ## Intended Full Flow

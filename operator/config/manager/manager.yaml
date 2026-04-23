@@ -15,7 +15,7 @@ spec:
       serviceAccountName: tiny-llm-operator
       containers:
         - name: manager
-          image: ghcr.io/your-org/tiny-llm-operator:latest
+          image: ghcr.io/victorvwier/tiny-llm-operator:latest
           args:
             - --metrics-bind-address=:8080
             - --health-probe-bind-address=:8081

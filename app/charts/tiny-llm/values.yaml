@@ -1,5 +1,5 @@
 image:
-  repository: ghcr.io/your-org/tiny-llm-runner
+  repository: ghcr.io/victorvwier/tiny-llm-runner
 tag: latest
 
 service:

@@ -4,7 +4,7 @@ metadata:
   name: tiny-llm
   namespace: tiny-llm
 spec:
-  image: ghcr.io/your-org/tiny-llm-runner:latest
+  image: ghcr.io/victorvwier/tiny-llm-runner:latest
   replicas: 1
   modelMode: mock
   promptPrefix: Demo:
