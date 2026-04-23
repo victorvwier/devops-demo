@@ -7,7 +7,7 @@ spec:
   image: ghcr.io/victorvwier/tiny-llm-runner:latest
   replicas: 1
   modelMode: mock
-  promptPrefix: Demo:
+  promptPrefix: "Demo:"
   ingress:
     enabled: true
     host: tiny-llm.demo.example.com
