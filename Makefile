@@ -1,4 +1,4 @@
-.PHONY: test build-app build-operator fmt
+.PHONY: test build-app build-operator fmt demo-ui
 
 test:
 	go test ./...
@@ -11,3 +11,6 @@ build-operator:
 
 fmt:
 	go fmt ./...
+
+demo-ui:
+	./scripts/open-demo-ui.sh $(DROPLET_IP)

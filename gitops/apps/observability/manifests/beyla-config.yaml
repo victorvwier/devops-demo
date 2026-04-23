@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: beyla-config
+  namespace: observability
+data:
+  beyla-config.yml: |
+    attributes:
+      kubernetes:
+        enable: true
+    routes:
+      unmatched: heuristic
+    discovery:
+      instrument:
+        - k8s_namespace: tiny-llm
+          k8s_deployment_name: tiny-llm
+    prometheus_export:
+      port: 8999
+      path: /metrics
+      features:
+        - application
+        - application_span
+        - application_process
+        - application_service_graph

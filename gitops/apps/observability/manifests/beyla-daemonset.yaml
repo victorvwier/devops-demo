@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: beyla
+  namespace: observability
+spec:
+  selector:
+    matchLabels:
+      instrumentation: beyla
+  template:
+    metadata:
+      labels:
+        instrumentation: beyla
+    spec:
+      serviceAccountName: beyla
+      hostPID: true
+      containers:
+        - name: beyla
+          image: grafana/beyla:latest
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+            readOnlyRootFilesystem: true
+          env:
+            - name: BEYLA_CONFIG_PATH
+              value: /config/beyla-config.yml
+          volumeMounts:
+            - name: beyla-config
+              mountPath: /config
+            - name: var-run-beyla
+              mountPath: /var/run/beyla
+      volumes:
+        - name: beyla-config
+          configMap:
+            name: beyla-config
+        - name: var-run-beyla
+          emptyDir: {}

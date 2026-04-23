@@ -19,13 +19,14 @@
 2. verify Argo CD apps sync
 3. apply `gitops/apps/tiny-llm/manifests/sample-cr.yaml`
 4. hit `/health`, `/generate`, `/slow`, `/error`, `/config`
-5. open Argo CD in your laptop browser:
+5. open Argo CD and Grafana in your laptop browser:
 
 ```bash
-ssh -L 8080:127.0.0.1:8080 root@<droplet-ip> 'kubectl -n argocd port-forward svc/argocd-server 8080:443'
+make demo-ui DROPLET_IP=<droplet-ip>
 ```
 
 Then browse to `https://localhost:8080`.
+Then browse to `http://localhost:3000`.
 
 ## If You Are New To Terraform
 
