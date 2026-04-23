@@ -1,5 +1,4 @@
 resources:
   - operator/operator-app.yaml
   - observability/observability-app.yaml
-  - gateway/gateway-app.yaml
   - tiny-llm/tiny-llm-app.yaml

@@ -23,6 +23,11 @@ locals {
     #!/usr/bin/env bash
     set -euo pipefail
 
+    exec > >(tee -a /var/log/demo-bootstrap.log) 2>&1
+
+    echo "starting demo bootstrap"
+
+    echo "installing k3s"
     /opt/bootstrap/install-k3s-server.sh
 
     until test -f /etc/rancher/k3s/k3s.yaml; do
@@ -32,9 +37,11 @@ locals {
     mkdir -p /root/.kube
     ln -sf /etc/rancher/k3s/k3s.yaml /root/.kube/config
 
+    echo "installing k9s"
     /opt/bootstrap/install-k9s.sh
 
     export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+    echo "waiting for k3s api"
     for _ in $(seq 1 60); do
       if kubectl get nodes >/dev/null 2>&1; then
         break
@@ -42,10 +49,30 @@ locals {
       sleep 5
     done
 
+    echo "k3s nodes"
     kubectl get nodes
+
+    echo "installing argocd"
     /opt/bootstrap/install-argocd.sh
 
-    kubectl apply -f /opt/bootstrap/root-app.yaml
+    echo "applying root app"
+    root_app_applied=false
+    for _ in $(seq 1 30); do
+      if kubectl apply -f /opt/bootstrap/root-app.yaml; then
+        echo "root app applied"
+        root_app_applied=true
+        break
+      fi
+      echo "root app apply failed, retrying"
+      sleep 10
+    done
+
+    if [[ "$root_app_applied" != true ]]; then
+      echo "root app never applied"
+      exit 1
+    fi
+
+    echo "bootstrap complete"
   EOT
 
   user_data = templatefile("${path.module}/cloud-init.yaml.tftpl", {

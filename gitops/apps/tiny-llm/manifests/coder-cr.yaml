@@ -10,3 +10,6 @@ spec:
     file: qwen2.5-0.5b-instruct-q5_k_m.gguf
     revision: main
   promptPrefix: "Answer like a concise coding assistant."
+  ingress:
+    enabled: true
+    host: tiny-llm.demo.example.com

@@ -6,4 +6,7 @@ if [[ $# -ne 1 ]]; then
   exit 1
 fi
 
-exec ssh -N -L 8080:127.0.0.1:30080 root@"$1"
+exec ssh \
+  -L 8080:127.0.0.1:8080 \
+  root@"$1" \
+  'kubectl -n argocd port-forward svc/argocd-server 8080:443 >/tmp/argocd-portforward.log 2>&1 & wait'
