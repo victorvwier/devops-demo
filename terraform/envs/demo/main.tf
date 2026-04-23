@@ -17,6 +17,7 @@ locals {
   k9s_script             = file(abspath("${path.module}/../../../bootstrap/scripts/install-k9s.sh"))
   argocd_password_script = file(abspath("${path.module}/../../../bootstrap/scripts/get-argocd-admin-password.sh"))
   argocd_script          = file(abspath("${path.module}/../../../bootstrap/scripts/install-argocd.sh"))
+  root_app_yaml          = file(abspath("${path.module}/../../../gitops/root/root-app.yaml"))
 
   bootstrap_script = <<-EOT
     #!/usr/bin/env bash
@@ -43,6 +44,8 @@ locals {
 
     kubectl get nodes
     /opt/bootstrap/install-argocd.sh
+
+    kubectl apply -f /opt/bootstrap/root-app.yaml
   EOT
 
   user_data = templatefile("${path.module}/cloud-init.yaml.tftpl", {
@@ -50,6 +53,7 @@ locals {
     k9s_script             = local.k9s_script
     argocd_password_script = local.argocd_password_script
     argocd_script          = local.argocd_script
+    root_app_yaml          = local.root_app_yaml
     bootstrap_script       = local.bootstrap_script
   })
 }

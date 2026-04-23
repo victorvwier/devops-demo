@@ -1,6 +1,7 @@
 #cloud-config
 package_update: true
 packages:
+  - btop
   - curl
 
 write_files:
@@ -20,6 +21,10 @@ write_files:
     permissions: "0755"
     content: |
       ${indent(6, argocd_script)}
+  - path: /opt/bootstrap/root-app.yaml
+    permissions: "0644"
+    content: |
+      ${indent(6, root_app_yaml)}
   - path: /opt/bootstrap/bootstrap.sh
     permissions: "0755"
     content: |

@@ -10,7 +10,7 @@ variable "region" {
 
 variable "size" {
   type    = string
-  default = "s-2vcpu-4gb"
+  default = "s-4vcpu-8gb"
 }
 
 variable "image" {

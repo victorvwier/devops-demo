@@ -10,8 +10,5 @@ spec:
     file: SmolLM2-135M-Instruct-Q4_K_M.gguf
     revision: main
   promptPrefix: "Be brief and helpful."
-  ingress:
-    enabled: true
-    host: tiny-llm.demo.example.com
   observability:
     beylaEnabled: true

@@ -10,35 +10,24 @@
 6. verify k3s with `k3s kubectl get nodes`
 7. Argo CD is installed automatically by cloud-init
 8. run `ssh root@<droplet-ip> 'argocd-admin-password'`
-9. apply `gitops/root/root-app.yaml` after updating the repo URL to your fork
+9. if you forked the repo, update `gitops/root/root-app.yaml` before `terraform apply`
 10. `k9s` is installed and uses `/root/.kube/config`
 
 ## Demo flow
 
 1. verify `k3s kubectl get nodes`
 2. verify Argo CD apps sync
-3. apply `gitops/apps/tiny-llm/manifests/sample-cr.yaml`
+3. wait for Argo CD to auto-sync the root app and TinyLLM manifests
 4. hit `/health`, `/generate`, `/slow`, `/error`, `/config`
 5. open the frontend, Argo CD, and Grafana in your laptop browser:
 
 ```bash
-./scripts/port-forward-frontend.sh <droplet-ip>
 make demo-ui DROPLET_IP=<droplet-ip>
 ```
 
-The frontend is available at `http://localhost:8081`.
-
-If you want to forward them separately:
-
-```bash
-./scripts/port-forward-frontend.sh <droplet-ip>
-./scripts/port-forward-argocd.sh <droplet-ip>
-./scripts/port-forward-grafana.sh <droplet-ip>
-```
-
-Then browse to `http://localhost:8081` for the frontend.
-Then browse to `https://localhost:8080` for Argo CD.
-Then browse to `http://localhost:3000` for Grafana.
+The frontend is available at `http://<droplet-ip>:30081`.
+Argo CD is available at `https://<droplet-ip>:30080`.
+Grafana is available at `http://<droplet-ip>:30030`.
 
 ## If You Are New To Terraform
 

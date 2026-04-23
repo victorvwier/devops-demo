@@ -10,7 +10,6 @@ import (
 	demov1alpha1 "devops-demo/operator/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -26,10 +25,10 @@ const (
 	frontendName       = "tiny-llm-frontend"
 	frontendConfigMap  = "tiny-llm-frontend-config"
 	frontendImage      = "ghcr.io/victorvwier/tiny-llm-runner:latest"
-	frontendHost       = "tiny-llm.demo.example.com"
 	backendImage       = "ghcr.io/ggml-org/llama.cpp:server"
 	backendListenPort  = 8080
 	frontendListenPort = 8080
+	frontendNodePort   = 30081
 )
 
 type TinyLLMServiceReconciler struct {
@@ -111,26 +110,6 @@ func (r *TinyLLMServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 	logger.Info("backend service reconciled")
 
-	if svc.Spec.Ingress.Enabled {
-		ingress := &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: svc.Name, Namespace: svc.Namespace}}
-		_, err = controllerutil.CreateOrUpdate(ctx, r.Client, ingress, func() error {
-			ingress.Spec.Rules = []networkingv1.IngressRule{{
-				Host: svc.Spec.Ingress.Host,
-				IngressRuleValue: networkingv1.IngressRuleValue{HTTP: &networkingv1.HTTPIngressRuleValue{Paths: []networkingv1.HTTPIngressPath{{
-					Path:     "/",
-					PathType: func() *networkingv1.PathType { p := networkingv1.PathTypePrefix; return &p }(),
-					Backend:  networkingv1.IngressBackend{Service: &networkingv1.IngressServiceBackend{Name: service.Name, Port: networkingv1.ServiceBackendPort{Number: 80}}},
-				}}}},
-			}}
-			return controllerutil.SetControllerReference(&svc, ingress, r.Scheme)
-		})
-		if err != nil {
-			logger.Error(err, "reconciling backend ingress")
-			return ctrl.Result{}, err
-		}
-		logger.Info("backend ingress reconciled", "host", svc.Spec.Ingress.Host)
-	}
-
 	frontendCatalog, err := r.serviceCatalog(ctx, svc.Namespace)
 	if err != nil {
 		logger.Error(err, "building frontend catalog")
@@ -141,7 +120,7 @@ func (r *TinyLLMServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		logger.Error(err, "reconciling shared frontend")
 		return ctrl.Result{}, err
 	}
-	logger.Info("shared frontend reconciled", "frontendURL", frontendURL())
+	logger.Info("shared frontend reconciled", "frontendPort", frontendNodePort)
 
 	phase := "Pending"
 	readyReplicas := int32(0)
@@ -159,7 +138,7 @@ func (r *TinyLLMServiceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	svc.Status.ReadyReplicas = readyReplicas
 	svc.Status.BackendMode = "llama.cpp"
 	svc.Status.BackendURL = backendURLFor(svc.Namespace, svc.Name)
-	svc.Status.FrontendURL = frontendURL()
+	svc.Status.FrontendURL = fmt.Sprintf("http://<droplet-ip>:%d", frontendNodePort)
 	svc.Status.LastReconcileTime = metav1.Now()
 	if err := r.Status().Update(ctx, &svc); err != nil {
 		logger.Error(err, "updating status")
@@ -175,7 +154,6 @@ func (r *TinyLLMServiceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&demov1alpha1.TinyLLMService{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Service{}).
-		Owns(&networkingv1.Ingress{}).
 		Complete(r)
 }
 
@@ -244,21 +222,8 @@ func (r *TinyLLMServiceReconciler) ensureFrontend(ctx context.Context, namespace
 	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, service, func() error {
 		service.Spec.Selector = map[string]string{"app": frontendName}
 		service.Spec.Ports = []corev1.ServicePort{{Port: 80, TargetPort: intstrFromInt(frontendListenPort)}}
-		return nil
-	}); err != nil {
-		return err
-	}
-
-	ingress := &networkingv1.Ingress{ObjectMeta: metav1.ObjectMeta{Name: frontendName, Namespace: namespace}}
-	if _, err := controllerutil.CreateOrUpdate(ctx, r.Client, ingress, func() error {
-		ingress.Spec.Rules = []networkingv1.IngressRule{{
-			Host: frontendHost,
-			IngressRuleValue: networkingv1.IngressRuleValue{HTTP: &networkingv1.HTTPIngressRuleValue{Paths: []networkingv1.HTTPIngressPath{{
-				Path:     "/",
-				PathType: func() *networkingv1.PathType { p := networkingv1.PathTypePrefix; return &p }(),
-				Backend:  networkingv1.IngressBackend{Service: &networkingv1.IngressServiceBackend{Name: service.Name, Port: networkingv1.ServiceBackendPort{Number: 80}}},
-			}}}},
-		}}
+		service.Spec.Type = corev1.ServiceTypeNodePort
+		service.Spec.Ports[0].NodePort = frontendNodePort
 		return nil
 	}); err != nil {
 		return err
@@ -269,10 +234,6 @@ func (r *TinyLLMServiceReconciler) ensureFrontend(ctx context.Context, namespace
 
 func backendURLFor(namespace, name string) string {
 	return fmt.Sprintf("http://%s.%s.svc.cluster.local", name, namespace)
-}
-
-func frontendURL() string {
-	return fmt.Sprintf("https://%s", frontendHost)
 }
 
 func int32Ptr(v int32) *int32 {

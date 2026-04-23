@@ -12,7 +12,6 @@ type TinyLLMServiceSpec struct {
 	Model         TinyLLMModelSpec            `json:"model,omitempty"`
 	PromptPrefix  string                      `json:"promptPrefix,omitempty"`
 	Resources     corev1.ResourceRequirements `json:"resources,omitempty"`
-	Ingress       TinyLLMServiceIngress       `json:"ingress,omitempty"`
 	Observability TinyLLMObservability        `json:"observability,omitempty"`
 }
 
@@ -20,11 +19,6 @@ type TinyLLMModelSpec struct {
 	Repository string `json:"repository,omitempty"`
 	File       string `json:"file,omitempty"`
 	Revision   string `json:"revision,omitempty"`
-}
-
-type TinyLLMServiceIngress struct {
-	Enabled bool   `json:"enabled,omitempty"`
-	Host    string `json:"host,omitempty"`
 }
 
 type TinyLLMObservability struct {

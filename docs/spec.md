@@ -118,7 +118,7 @@ Custom operator built with Kubebuilder:
   * Deployment
   * Service
   * ConfigMap
-  * optional Ingress
+  * NodePort frontend service
 * updates status with:
 
   * phase
@@ -173,16 +173,13 @@ spec:
   resources:
     cpu: "250m"
     memory: "512Mi"
-  ingress:
-    enabled: true
-    host: tiny-llm.demo.example.com
   observability:
     beylaEnabled: true
 status:
   phase: Ready
   readyReplicas: 1
   backendURL: http://tiny-llm.tiny-llm.svc.cluster.local
-  frontendURL: https://tiny-llm.demo.example.com
+  frontendURL: http://<droplet-ip>:30081
   lastReconcileTime: "2026-04-23T10:00:00Z"
 ```
 
@@ -196,8 +193,6 @@ Suggested fields:
 * `model.revision`
 * `promptPrefix`
 * `resources`
-* `ingress.enabled`
-* `ingress.host`
 * `observability.beylaEnabled`
 
 ### Tiny model refs
@@ -215,8 +210,8 @@ The operator should reconcile a `TinyLLMService` into:
 
 * a backend Deployment running a tiny LLM server
 * a backend Service exposing it internally
-* an optional backend Ingress
 * a shared frontend Deployment and catalog ConfigMap
+* a NodePort service for the frontend
 * status updates on the CR
 
 ### Reconciliation rules
@@ -224,7 +219,6 @@ The operator should reconcile a `TinyLLMService` into:
 * if CR does not exist, nothing exists
 * if `replicas` changes, scale Deployment
 * if `model.*` changes, roll Deployment
-* if `ingress.enabled` changes, add/remove Ingress
 * if Service endpoint becomes healthy, mark CR `Ready`
 * if pods are pending or crashing, set status accordingly
 
@@ -465,8 +459,9 @@ spec:
 
 Show:
 
-* operator creates backend Deployment + Service + optional Ingress
+* operator creates backend Deployment + Service
 * operator also ensures the shared frontend and catalog
+* frontend is reachable via NodePort
 * status moves to Ready
 
 ### Scenario 3 — rollout through CR

@@ -3,8 +3,10 @@ kind: Service
 metadata:
   name: tiny-llm
 spec:
+  type: NodePort
   selector:
     app: tiny-llm
   ports:
     - port: 80
       targetPort: 8080
+      nodePort: 30081

@@ -84,18 +84,17 @@ If you want the shortest path to a working demo, do this:
 4. Verify k3s with the output `k3s_command`
 5. Argo CD is installed automatically by cloud-init
 6. Run `ssh root@<droplet-ip> 'argocd-admin-password'` and log in as `admin`
-7. Apply the GitOps root app after pointing it at your repo fork
-8. Apply `gitops/apps/tiny-llm/manifests/sample-cr.yaml`
-9. To open the frontend, Argo CD, and Grafana from your laptop, use the helpers:
+7. If you forked the repo, update `gitops/root/root-app.yaml` before `terraform apply`
+8. Let Argo CD auto-apply the platform apps and TinyLLM CRs.
+9. To open the frontend, Argo CD, and Grafana from your laptop, use the helper:
 
 ```bash
-./scripts/port-forward-frontend.sh <droplet-ip>
 make demo-ui DROPLET_IP=<droplet-ip>
 ```
 
-Then open `http://localhost:8081`.
-Then open `https://localhost:8080`.
-Then open `http://localhost:3000`.
+Then open `http://<droplet-ip>:30081`.
+Then open `https://<droplet-ip>:30080`.
+Then open `http://<droplet-ip>:30030`.
 
 ## Build The Operator Binary
 
@@ -129,7 +128,7 @@ The spec this repo follows is:
 2. k3s boots on the first VM.
 3. Argo CD installs once.
 4. Argo CD syncs namespaces, operator, observability, and the demo app.
-5. Applying a `TinyLLMService` creates a backend Deployment, Service, and optional Ingress, plus a shared frontend Deployment and catalog ConfigMap.
+5. Applying a `TinyLLMService` creates a backend Deployment, Service, and a shared frontend Deployment and catalog ConfigMap.
 6. The frontend serves `/health`, `/generate`, `/api/chat`, `/api/services`, `/slow`, `/error`, and `/config`.
 7. Grafana/Prometheus/Beyla show traffic and latency.
 
