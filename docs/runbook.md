@@ -19,19 +19,24 @@
 2. verify Argo CD apps sync
 3. apply `gitops/apps/tiny-llm/manifests/sample-cr.yaml`
 4. hit `/health`, `/generate`, `/slow`, `/error`, `/config`
-5. open Argo CD and Grafana in your laptop browser:
+5. open the frontend, Argo CD, and Grafana in your laptop browser:
 
 ```bash
+./scripts/port-forward-frontend.sh <droplet-ip>
 make demo-ui DROPLET_IP=<droplet-ip>
 ```
+
+The frontend is available at `http://localhost:8081`.
 
 If you want to forward them separately:
 
 ```bash
+./scripts/port-forward-frontend.sh <droplet-ip>
 ./scripts/port-forward-argocd.sh <droplet-ip>
 ./scripts/port-forward-grafana.sh <droplet-ip>
 ```
 
+Then browse to `http://localhost:8081` for the frontend.
 Then browse to `https://localhost:8080` for Argo CD.
 Then browse to `http://localhost:3000` for Grafana.
 

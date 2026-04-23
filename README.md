@@ -85,13 +85,15 @@ If you want the shortest path to a working demo, do this:
 5. Argo CD is installed automatically by cloud-init
 6. Run `ssh root@<droplet-ip> 'argocd-admin-password'` and log in as `admin`
 7. Apply the GitOps root app after pointing it at your repo fork
-8. Apply `gitops/apps/tiny-llm/manifests/sample-cr.yaml` and `gitops/apps/tiny-llm/manifests/coder-cr.yaml`
-9. To open Argo CD and Grafana from your laptop, use the helper:
+8. Apply `gitops/apps/tiny-llm/manifests/sample-cr.yaml`
+9. To open the frontend, Argo CD, and Grafana from your laptop, use the helpers:
 
 ```bash
+./scripts/port-forward-frontend.sh <droplet-ip>
 make demo-ui DROPLET_IP=<droplet-ip>
 ```
 
+Then open `http://localhost:8081`.
 Then open `https://localhost:8080`.
 Then open `http://localhost:3000`.
 

@@ -204,7 +204,7 @@ Suggested fields:
 
 Use tiny quantized GGUF models from Hugging Face.
 
-Suggested examples:
+Suggested examples for future CRs:
 
 * `bartowski/SmolLM2-135M-Instruct-GGUF` + `SmolLM2-135M-Instruct-Q4_K_M.gguf`
 * `Qwen/Qwen2.5-0.5B-Instruct-GGUF` + `qwen2.5-0.5b-instruct-q5_k_m.gguf`
