@@ -13,14 +13,25 @@ resource "digitalocean_tag" "this" {
 }
 
 locals {
-  k3s_server_script = file(abspath("${path.module}/../../../bootstrap/scripts/install-k3s-server.sh"))
-  argocd_script     = file(abspath("${path.module}/../../../bootstrap/scripts/install-argocd.sh"))
+  k3s_server_script      = file(abspath("${path.module}/../../../bootstrap/scripts/install-k3s-server.sh"))
+  k9s_script             = file(abspath("${path.module}/../../../bootstrap/scripts/install-k9s.sh"))
+  argocd_password_script = file(abspath("${path.module}/../../../bootstrap/scripts/get-argocd-admin-password.sh"))
+  argocd_script          = file(abspath("${path.module}/../../../bootstrap/scripts/install-argocd.sh"))
 
   bootstrap_script = <<-EOT
     #!/usr/bin/env bash
     set -euo pipefail
 
     /opt/bootstrap/install-k3s-server.sh
+
+    until test -f /etc/rancher/k3s/k3s.yaml; do
+      sleep 2
+    done
+
+    mkdir -p /root/.kube
+    ln -sf /etc/rancher/k3s/k3s.yaml /root/.kube/config
+
+    /opt/bootstrap/install-k9s.sh
 
     export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
     for _ in $(seq 1 60); do
@@ -35,9 +46,11 @@ locals {
   EOT
 
   user_data = templatefile("${path.module}/cloud-init.yaml.tftpl", {
-    k3s_server_script = local.k3s_server_script
-    argocd_script     = local.argocd_script
-    bootstrap_script  = local.bootstrap_script
+    k3s_server_script      = local.k3s_server_script
+    k9s_script             = local.k9s_script
+    argocd_password_script = local.argocd_password_script
+    argocd_script          = local.argocd_script
+    bootstrap_script       = local.bootstrap_script
   })
 }
 

@@ -9,14 +9,23 @@
 5. SSH to the droplet using the printed command as `root`
 6. verify k3s with `k3s kubectl get nodes`
 7. Argo CD is installed automatically by cloud-init
-8. apply `gitops/root/root-app.yaml` after updating the repo URL to your fork
+8. run `ssh root@<droplet-ip> 'argocd-admin-password'`
+9. apply `gitops/root/root-app.yaml` after updating the repo URL to your fork
+10. `k9s` is installed and uses `/root/.kube/config`
 
 ## Demo flow
 
-1. verify `sudo k3s kubectl get nodes`
+1. verify `k3s kubectl get nodes`
 2. verify Argo CD apps sync
 3. apply `gitops/apps/tiny-llm/manifests/sample-cr.yaml`
 4. hit `/health`, `/generate`, `/slow`, `/error`, `/config`
+5. open Argo CD in your laptop browser:
+
+```bash
+ssh -L 8080:127.0.0.1:8080 root@<droplet-ip> 'kubectl -n argocd port-forward svc/argocd-server 8080:443'
+```
+
+Then browse to `https://localhost:8080`.
 
 ## If You Are New To Terraform
 

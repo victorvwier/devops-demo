@@ -37,6 +37,8 @@ The `terraform/envs/demo` stack now creates a real DigitalOcean droplet.
 - it creates a firewall
 - it injects your SSH public key
 - cloud-init installs k3s automatically on first boot
+- cloud-init installs `k9s` and wires `/root/.kube/config`
+- cloud-init installs `argocd-admin-password` to print the initial login password
 
 Set `DIGITALOCEAN_TOKEN` before running Terraform.
 If your public key is not `~/.ssh/id_ed25519.pub`, set `ssh_public_key_path`.
@@ -81,8 +83,16 @@ If you want the shortest path to a working demo, do this:
 3. SSH to the output `ssh_command` as `root`
 4. Verify k3s with the output `k3s_command`
 5. Argo CD is installed automatically by cloud-init
-6. Apply the GitOps root app after pointing it at your repo fork
-7. Apply `gitops/apps/tiny-llm/manifests/sample-cr.yaml`
+6. Run `ssh root@<droplet-ip> 'argocd-admin-password'` and log in as `admin`
+7. Apply the GitOps root app after pointing it at your repo fork
+8. Apply `gitops/apps/tiny-llm/manifests/sample-cr.yaml`
+9. To open Argo CD from your laptop, use an SSH tunnel that starts the port-forward on the droplet:
+
+```bash
+ssh -L 8080:127.0.0.1:8080 root@<droplet-ip> 'kubectl -n argocd port-forward svc/argocd-server 8080:443'
+```
+
+Then open `https://localhost:8080`.
 
 ## Build The Operator Binary
 

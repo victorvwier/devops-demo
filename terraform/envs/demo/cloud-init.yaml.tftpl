@@ -8,6 +8,14 @@ write_files:
     permissions: "0755"
     content: |
       ${indent(6, k3s_server_script)}
+  - path: /opt/bootstrap/install-k9s.sh
+    permissions: "0755"
+    content: |
+      ${indent(6, k9s_script)}
+  - path: /usr/local/bin/argocd-admin-password
+    permissions: "0755"
+    content: |
+      ${indent(6, argocd_password_script)}
   - path: /opt/bootstrap/install-argocd.sh
     permissions: "0755"
     content: |
